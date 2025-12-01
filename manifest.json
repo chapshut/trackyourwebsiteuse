@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Time Tracker",
-  "version": "2.2",
-  "description": "Works on all tabs — even already open ones",
+  "version": "2.3",
+  "description": "Live private time tracker with secure wipe",
 
   "permissions": ["storage", "tabs", "idle"],
   "host_permissions": ["<all_urls>"],
@@ -18,7 +18,12 @@
   }],
 
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_title": "Time Tracker"
+  },
+
+  "icons": {
+    "128": "icon.png"
   },
 
   "content_security_policy": {
