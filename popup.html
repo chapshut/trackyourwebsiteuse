@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body{font-family:system-ui;padding:16px;width:350px;background:#fff;color:#000}
+    h3{margin:0 0 12px;font-size:18px;color:#1a0dab}
+    .site{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+    .total{font-weight:bold;margin-top:12px;padding-top:8px;border-top:2px solid #000}
+    button{margin-top:16px;width:100%;padding:9px;background:#d32f2f;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+    button:hover{background:#b71c1c}
+    #msg{margin-top:10px;padding:10px;background:#e8f5e8;border:1px solid #4caf50;border-radius:6px;font-size:13px;display:none}
+  </style>
+</head>
+<body>
+  <h3>Today’s Time (Live)</h3>
+  <div id="data">Loading…</div>
+  <button id="clear">Clear All Data (no confirm)</button>
+  <div id="msg"></div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
