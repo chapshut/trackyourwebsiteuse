@@ -1,4 +1,0 @@
-TimeTracker/
-├── manifest.json
-├── background.js      (does everything: background + content + popup logic)
-└── popup.html         (tiny popup with inline everything)
