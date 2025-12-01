@@ -3,19 +3,35 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body{font-family:system-ui;padding:16px;width:350px;background:#fff;color:#000}
-    h3{margin:0 0 12px;font-size:18px;color:#1a0dab}
-    .site{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
-    .total{font-weight:bold;margin-top:12px;padding-top:8px;border-top:2px solid #000}
-    button{margin-top:16px;width:100%;padding:9px;background:#d32f2f;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
-    button:hover{background:#b71c1c}
-    #msg{margin-top:10px;padding:10px;background:#e8f5e8;border:1px solid #4caf50;border-radius:6px;font-size:13px;display:none}
+    body{font-family:system-ui;padding:16px;width:400px;background:#fff;color:#000}
+    h3{margin:0 0 14px;font-size:18px;color:#1a0dab}
+    .section{margin:24px 0 0}
+    .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;font-size:14px}
+    .domain{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}
+    .time{font-weight:600;min-width:90px;text-align:right}
+    .avg{font-size:12px;color:#555;background:#f5f5f5;padding:3px 8px;border-radius:6px}
+    .weekly{color:#1976d2;background:#e3f2fd}
+    .total{font-weight:bold;margin:16px 0;padding:12px 0;border-top:2px solid #000;text-align:right}
+    button{margin-top:20px;width:100%;padding:11px;background:#d32f2f;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer}
+    #msg{margin-top:10px;padding:12px;background:#e8f5e8;border:1px solid #4caf50;border-radius:8px;font-size:13px;display:none}
   </style>
 </head>
 <body>
-  <h3>Today’s Time (Live)</h3>
-  <div id="data">Loading…</div>
-  <button id="clear">Clear All Data (no confirm)</button>
+  <h3>Today’s Time</h3>
+  <div id="today"></div>
+  <div class="total" id="todayTotal"></div>
+
+  <div class="section">
+    <strong>Daily Average (all time)</strong>
+    <div id="dailyAvg"></div>
+  </div>
+
+  <div class="section">
+    <strong>Weekly Average (last 7 days)</strong>
+    <div id="weeklyAvg"></div>
+  </div>
+
+  <button id="clear">Wipe All Data</button>
   <div id="msg"></div>
 
   <script type="module" src="popup.js"></script>

@@ -1,63 +1,72 @@
 function fmt(ms) {
-    const m = Math.floor(ms/60000);
-    const s = Math.floor(ms/1000) % 60;
-    return `${m}m ${s}s`;
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor(ms / 1000) % 60;
+    return h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
 function update() {
     chrome.storage.local.get({debugLog: []}, res => {
-        const map = {};
-        res.debugLog.forEach(e => {
-            map[e.domain] = (map[e.domain] || 0) + e.duration;
+        const log = res.debugLog || [];
+        const today = new Date().toISOString().slice(0,10);
+        const byDate = {};
+        log.forEach(e => {
+            const date = e.date || today;
+            if (!byDate[date]) byDate[date] = {};
+            byDate[date][e.domain] = (byDate[date][e.domain] || 0) + e.duration;
         });
-        const sorted = Object.entries(map).sort((a,b) => b[1] - a[1]);
-        const total = Object.values(map).reduce((a,b) => a + b, 0);
 
-        const html = sorted.length === 0
-        ? "No activity recorded yet"
-        : sorted.map(([d, t]) => `<div class="site"><span>${d}</span><b>${fmt(t)}</b></div>`).join("") +
-        `<div class="total">Total today: ${fmt(total)}</div>`;
+        // Today
+        const todayData = byDate[today] || {};
+        const todayHtml = Object.entries(todayData)
+        .sort((a,b) => b[1] - a[1])
+        .map(([d, t]) => `<div class="row"><div class="domain" title="${d}">${d}</div><div class="time">${fmt(t)}</div></div>`)
+        .join("") || "<i style='color:#888'>No activity today</i>";
 
-        document.getElementById("data").innerHTML = html;
+        document.getElementById("today").innerHTML = todayHtml;
+        document.getElementById("todayTotal").textContent = `Today total: ${fmt(Object.values(todayData).reduce((a,b)=>a+b,0))}`;
+
+        // Daily average
+        const daily = {};
+        Object.entries(byDate).forEach(([_, sites]) => {
+            Object.entries(sites).forEach(([d, t]) => daily[d] = (daily[d] || 0) + t);
+        });
+        const daysCount = Object.keys(byDate).length;
+        const dailyHtml = Object.entries(daily)
+        .sort((a,b) => b[1] - a[1])
+        .map(([d, t]) => `<div class="row"><div class="domain" title="${d}">${d}</div><div class="time">${fmt(t)} <span class="avg">avg ${fmt(t/daysCount)}/day</span></div></div>`)
+        .join("") || "<i style='color:#888'>No data yet</i>";
+
+        document.getElementById("dailyAvg").innerHTML = dailyHtml;
+
+        // Weekly
+        const last7 = Object.keys(byDate).sort().slice(-7);
+        const weekly = {};
+        last7.forEach(date => {
+            const day = byDate[date] || {};
+            Object.entries(day).forEach(([d, t]) => weekly[d] = (weekly[d] || 0) + t);
+        });
+        const weeklyHtml = Object.entries(weekly)
+        .sort((a,b) => b[1] - a[1])
+        .map(([d, t]) => `<div class="row"><div class="domain" title="${d}">${d}</div><div class="time">${fmt(t)} <span class="weekly">avg ${fmt(t/last7.length)}/day</span></div></div>`)
+        .join("") || "<i style='color:#888'>No recent activity</i>";
+
+        document.getElementById("weeklyAvg").innerHTML = weeklyHtml;
     });
 }
 
-// ─────── SECURE SHRED + DELETE ───────
-document.getElementById("clear").addEventListener("click", () => {
-    const msg = document.getElementById("msg");
-    msg.style.display = "block";
-    msg.innerHTML = "Shredding data (3-pass overwrite)…";
-
-    // Step 1: Overwrite stored data 3 times with junk
-    const junk1 = Array(500).fill("OVERWRITTEN_BY_RANDOM_DATA_" + Math.random());
-    const junk2 = Array(500).fill(0);
-    const junk3 = Array(500).fill("FINAL_WIPE_" + Date.now());
-
-    // Pass 1 – random garbage
-    chrome.storage.local.set({debugLog: junk1}, () => {
-        // Pass 2 – zeros
-        chrome.storage.local.set({debugLog: junk2}, () => {
-            // Pass 3 – more random garbage
-            chrome.storage.local.set({debugLog: junk3}, () => {
-                // Final: actually delete everything
-                chrome.storage.local.clear(() => {
-                    // Tell background to reset in-memory timer too
-                    chrome.runtime.sendMessage({action: "fullReset"});
-
-                    document.getElementById("data").innerHTML = "<i>No activity recorded yet</i>";
-                    msg.innerHTML = `
-                    <strong>All data securely shredded & deleted!</strong><br><br>
-                    Your tracking data was overwritten 3 times<br>
-                    (DoD-style wipe) and then permanently removed<br>
-                    from Brave's local storage.<br><br>
-                    Nothing can be recovered — not even with forensic tools.
-                    `;
-                    setTimeout(() => msg.style.display = "none", 9000);
-                });
-            });
+document.getElementById("clear").onclick = () => {
+    if (confirm("Delete all tracking data?")) {
+        chrome.storage.local.clear(() => {
+            chrome.runtime.sendMessage({action: "fullReset"});
+            update();
+            const msg = document.getElementById("msg");
+            msg.textContent = "All data wiped!";
+            msg.style.display = "block";
+            setTimeout(() => msg.style.display = "none", 3000);
         });
-    });
-});
+    }
+};
 
 update();
-setInterval(update, 1000);
+setInterval(update, 1500);

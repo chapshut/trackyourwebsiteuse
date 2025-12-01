@@ -1,69 +1,55 @@
 let currentUrl = "";
 let startTime = Date.now();
 
-// === 1. Listen for full reset from popup ===
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, _, sendResponse) => {
     if (msg.action === "fullReset") {
         currentUrl = "";
         startTime = Date.now();
-
-        // Restart tracking the tab you're currently on — from 0 seconds
         chrome.tabs.query({active: true, lastFocusedWindow: true}, tabs => {
-            const tab = tabs[0];
-            if (tab?.url?.startsWith("http")) {
-                currentUrl = tab.url;
+            if (tabs[0]?.url?.startsWith("http")) {
+                currentUrl = tabs[0].url;
                 startTime = Date.now();
             }
         });
-
-        sendResponse({status: "reset done"});
+        sendResponse({ok: true});
     }
 });
 
-// === 2. Live update every 5 seconds (so popup shows increasing time) ===
 const liveUpdate = setInterval(() => {
     if (!currentUrl) return;
-    const durationSoFar = Date.now() - startTime;
-    if (durationSoFar < 2000) return; // ignore tiny sessions
+    const dur = Date.now() - startTime;
+    if (dur < 2000) return;
 
     chrome.storage.local.get({debugLog: []}, data => {
-        const entries = data.debugLog;
-        const last = entries[entries.length - 1];
-
+        const log = data.debugLog;
+        const last = log[log.length - 1];
         if (last && last.domain === new URL(currentUrl).hostname && !last.final) {
-            last.duration = durationSoFar; // update existing live entry
+            last.duration = dur;
         } else {
-            entries.push({
+            log.push({
                 domain: new URL(currentUrl).hostname,
-                         duration: durationSoFar,
-                         final: false
+                     duration: dur,
+                     date: new Date().toISOString().slice(0,10),
+                     final: false
             });
         }
-        chrome.storage.local.set({debugLog: entries});
+        chrome.storage.local.set({debugLog: log});
     });
 }, 5000);
 
-// === 3. Save final time when leaving tab or going idle ===
 function endSession() {
     if (!currentUrl) return;
-    const duration = Date.now() - startTime;
-    if (duration < 2000) return;
-
+    const dur = Date.now() - startTime;
+    if (dur < 2000) return;
     chrome.storage.local.get({debugLog: []}, data => {
-        const entries = data.debugLog;
-        const last = entries[entries.length - 1];
-
+        const log = data.debugLog;
+        const last = log[log.length - 1];
         if (last && last.domain === new URL(currentUrl).hostname && !last.final) {
-            last.duration = duration;
-            last.final = true;
+            last.duration = dur; last.final = true;
         } else {
-            entries.push({
-                domain: new URL(currentUrl).hostname,
-                         duration: duration,
-                         final: true
-            });
+            log.push({domain: new URL(currentUrl).hostname, duration: dur, date: new Date().toISOString().slice(0,10), final: true});
         }
-        chrome.storage.local.set({debugLog: entries});
+        chrome.storage.local.set({debugLog: log});
     });
 }
 
@@ -74,35 +60,20 @@ function startSession(url) {
     startTime = Date.now();
 }
 
-// === 4. Start tracking the tab you're on RIGHT NOW ===
 chrome.tabs.query({active: true, lastFocusedWindow: true}, tabs => {
-    const tab = tabs[0];
-    if (tab?.url?.startsWith("http")) {
-        startSession(tab.url);
-    }
+    if (tabs[0]?.url?.startsWith("http")) startSession(tabs[0].url);
 });
 
-// === 5. Keep tracking new tab switches and URL changes ===
 chrome.tabs.onActivated.addListener(info => {
     chrome.tabs.get(info.tabId, tab => {
         if (tab.url?.startsWith("http")) startSession(tab.url);
     });
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab.active && changeInfo.url?.startsWith("http")) {
-        startSession(changeInfo.url);
-    }
+chrome.tabs.onUpdated.addListener((id, change, tab) => {
+    if (tab.active && change.url?.startsWith("http")) startSession(change.url);
 });
 
-// === 6. Stop counting when computer is idle or locked ===
 chrome.idle.setDetectionInterval(120);
-chrome.idle.onStateChanged.addListener(state => {
-    if (state !== "active") endSession();
-});
-
-// === 7. Final save when extension unloads ===
-chrome.runtime.onSuspend.addListener(() => {
-    endSession();
-    clearInterval(liveUpdate);
-});
+chrome.idle.onStateChanged.addListener(state => state !== "active" && endSession());
+chrome.runtime.onSuspend.addListener(() => { endSession(); clearInterval(liveUpdate); });
